@@ -85,6 +85,7 @@ read_ihex_chunks(
 {
 	fw_chunk_t *chunk = *chunks_p;
 	fw_chunk_t *backlink_p = chunk;
+	fw_chunk_t **root_p = chunks_p;  // Keep track of root pointer for first chunk realloc
 	int         len, allocation = 0;
 	uint8_t     chk = 0;
 	uint8_t     bline[272];
@@ -172,8 +173,12 @@ read_ihex_chunks(
 			allocation += INCREMENT;
 			chunk = realloc(chunk, allocation + (sizeof *chunk - 1));
 
-			/* Update the pointer in the previous list element */
-			if ( backlink_p ) backlink_p->next = chunk;
+			/* Update the pointer in the previous list element or root */
+			if ( backlink_p ) {
+				backlink_p->next = chunk;
+			} else {
+				*root_p = chunk;  // Fix: Update root pointer for first chunk realloc
+			}
 
 			/* Refresh the pointer to the future chunk */
 			chunks_p = &chunk->next;
