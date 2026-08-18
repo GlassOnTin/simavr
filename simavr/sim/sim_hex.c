@@ -85,6 +85,7 @@ read_ihex_chunks(
 {
 	fw_chunk_t *chunk = *chunks_p;
 	fw_chunk_t *backlink_p = chunk;
+	fw_chunk_t **const chunk_root = chunks_p;
 	int         len, allocation = 0;
 	uint8_t     chk = 0;
 	uint8_t     bline[272];
@@ -172,11 +173,13 @@ read_ihex_chunks(
 			allocation += INCREMENT;
 			chunk = realloc(chunk, allocation + (sizeof *chunk - 1));
 
-			/* Update the pointer in the previous list element or root */
+			/* Update the pointer in the previous list element or root.
+			 * chunks_p points inside the old (freed) block here, so the
+			 * root must be updated through its own saved pointer. */
 			if ( backlink_p ) {
 				backlink_p->next = chunk;
 			} else {
-				*chunks_p = chunk;
+				*chunk_root = chunk;
 			}
 
 			/* Refresh the pointer to the future chunk */
@@ -203,7 +206,7 @@ read_ihex_file(
 		res = malloc((size_t)chunk->size);
 		memcpy(res, chunk->data,  chunk->size);
 	}
-	if (chunk->next)
+	if (chunk && chunk->next)
 		fprintf(stderr, "%s: Additional data blocks were ignored.\n", fname);
 	while(chunk) {
 		next_chunk = chunk->next;
